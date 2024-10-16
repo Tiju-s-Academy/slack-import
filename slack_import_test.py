@@ -45,7 +45,7 @@ def get_attachments(message):
     return '\n'.join( attachment.get('text') or attachment.get('from_url') for attachment in message['attachments'] )
 
 def get_files(message):
-    return '\n'.join( file['url_download'] for file in message['files'] )
+    return '\n'.join( file['url_private_download'] for file in message['files'] )
 
 # Get user name from @ mentions
 def get_user_name_from_match(match):
@@ -66,6 +66,17 @@ def replace_link_with_anchor_tag(text):
     text = re.sub(pattern, get_anchor_tag_from_match, text)
     return text
 
+def get_tel_anchor_tag_from_match(match):
+    url = match.group(1)         # Extract the URL part
+    description = match.group(2) # Extract the description part
+    return f"<a href='{url}'>{description}</a>"
+
+# Function to replace matched links with anchor tags
+def replace_tel_link_with_anchor_tag(text):
+    pattern = r'<(tel:[^\|>]+)\|([^>]+)>'
+    text = re.sub(pattern, get_tel_anchor_tag_from_match, text)
+    return text
+
 errored_messages = []
 for message in messages:
     try:
@@ -80,6 +91,8 @@ for message in messages:
             text += get_files(message)
         text = replace_user_mention_with_user_name(text)
         text = replace_link_with_anchor_tag(text)
+        text = replace_tel_link_with_anchor_tag(text)
+
         print(text)
         # print(f"{users[message['user']]['name']}: {message['text']}")
     except:
@@ -101,6 +114,7 @@ for message in messages:
                 reply_text += f"\t {get_files(reply_message)}"
             reply_text = replace_user_mention_with_user_name(reply_text)
             reply_text = replace_link_with_anchor_tag(reply_text)
+            reply_text = replace_tel_link_with_anchor_tag(reply_text)
             try:
                 print(reply_text)
                 pass
