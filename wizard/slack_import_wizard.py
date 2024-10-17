@@ -10,6 +10,8 @@ import json
 from . import helpers
 import traceback
 from markupsafe import Markup
+from datetime import datetime
+import mimetypes
 
 _logger = logging.getLogger("Slack Import Debug")
 
@@ -94,33 +96,51 @@ class SlackImportWizard(models.TransientModel):
 
                     errored_messages = []
                     for message in messages:
-                        try:
-                            text = f"<p>"
-                            if message.get('text'):
-                                text += self.process_text(message['text'])
+                        text = f"<p>"
+                        if message.get('text'):
+                            text += self.process_text(message['text'])
 
-                            if message.get('attachments') and not message.get('text'):
-                                text += self.process_text(helpers.get_attachments(message))
-                                # print(message,'\n')
+                        if message.get('attachments') and not message.get('text'):
+                            text += self.process_text(helpers.get_attachments(message))
+                            # print(message,'\n')
 
-                            if message.get('files'):
-                                text += self.process_text(helpers.get_files(message))
+                        message_attachments = []
+                        attachments_insert_list = []
 
-                            # Process the text to include tags, convert to unicode etc.. 
-                            # text = self.process_text(text)
-                            text = text+ '</p>'
-                            create_vals = self.get_values_for_record_creation(message_data=text, channel_name=channel_name, send_user=users[message['user']]['odoo_user'], )
-                            self.env['mail.message'].create(create_vals)
-                            print(text)
-                        except:
-                            exc = traceback.format_exc()
-                            errored_messages.append((message, exc))
+                        if message.get('files'):
+                            for file_data in message['files']:
+                                attachment = self.create_attachment_from_file_data(file_data, extract_path)
+                                message_attachments.append(attachment)
+                                attachments_insert_list.append((4, attachment.id))
+                            # text += self.process_text(helpers.get_files(message))
+
+                        # Process the text to include tags, convert to unicode etc.. 
+                        # text = self.process_text(text)
+                        text = text+ '</p>'
+                        create_vals = self.get_values_for_record_creation(message_data=text, channel_name=channel_name, send_user=users[message['user']]['odoo_user'], timestamp = message['ts'])
+                        new_message_record = self.env['mail.message'].create(create_vals)
+                        for attachment in message_attachments:
+                            attachment.write({'res_id': new_message_record.id})
+                        new_message_record.write({'attachment_ids': attachments_insert_list})
+                        print(text)
+
                             
                         # Replies to message
                         if message.get('thread_ts'):
                             # print(message)
                             for reply in message['replies']:
                                 reply_message = messages_dict[reply['ts']]
+
+                                message_attachments = []
+                                attachments_insert_list = []
+
+                                if reply_message.get('files'):
+                                    for file_data in reply_message['files']:
+                                        attachment = self.create_attachment_from_file_data(file_data, extract_path)
+                                        message_attachments.append(attachment)
+                                        attachments_insert_list.append((4, attachment.id))
+
+
                                 reply_text = f"<p>"
 
                                 if reply_message.get('text'):
@@ -132,8 +152,12 @@ class SlackImportWizard(models.TransientModel):
 
                                 # Process the text to include tags, convert to unicode etc.. 
                                 reply_text = reply_text+'</p>'
-                                create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= users[reply_message['user']]['odoo_user'], )
-                                self.env['mail.message'].create(create_vals)
+                                create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= users[reply_message['user']]['odoo_user'], parent_msg_id=new_message_record.id, timestamp=reply_message['ts'] )
+                                new_reply_message_record = self.env['mail.message'].create(create_vals)
+                                for attachment in message_attachments:
+                                    attachment.write({'res_id': new_reply_message_record.id})
+                                new_reply_message_record.write({'attachment_ids': attachments_insert_list})
+                                
                                 try:
                                     print(reply_text)
                                     pass
@@ -142,9 +166,6 @@ class SlackImportWizard(models.TransientModel):
                                     exc = traceback.format_exc()
                                     errored_messages.append((messages_dict[reply['ts']], exc))
                         print('\n')
-                    # from datetime import datetime
-                    # timestamp = 1728899885.867629
-                    # dt_object = datetime.fromtimestamp(timestamp)
 
                     print('errored_messages', len(errored_messages))
                     for message, exc in errored_messages:
@@ -177,7 +198,8 @@ class SlackImportWizard(models.TransientModel):
 
 
 
-    def get_values_for_record_creation(self, message_data: str, channel_name, send_user, parent_msg_id=False, all_users_data = {} ):
+    def get_values_for_record_creation(self, message_data: str, channel_name, send_user, parent_msg_id=False, all_users_data = {}, timestamp='' ):
+        send_datetime = datetime.fromtimestamp(float(timestamp))
         channel = self.env['discuss.channel'].sudo().search([('name','=',channel_name)])
         if channel:
             channel = channel[0]
@@ -190,12 +212,26 @@ class SlackImportWizard(models.TransientModel):
             'model': 'discuss.channel',
             'res_id': channel.id,
             'body': Markup(message_data),
-            # 'body': message_data,
             'message_type': 'comment',
             'parent_id': parent_msg_id,
             'subtype_id': 1,
             'record_company_id': 1, 
             'is_slack_message': True,
-            'create_uid': send_user.id
+            'create_uid': send_user.id,
+            'date': send_datetime,
         }
         return values
+    
+    def create_attachment_from_file_data(self, file_data, extract_path):
+        file_path = f"{extract_path}/__uploads/{file_data['id']}/{file_data['name']}"
+        if Path(file_path).exists:
+            with open(file_path, 'rb') as file:
+                data = file.read()
+                attachment_data = {
+                    'name': file_data['name'],
+                    'datas': base64.b64encode(data).decode('utf-8'),
+                    'res_model': 'mail.message',
+                    'mimetype': mimetypes.guess_type(file_data['name'])[0]
+                }
+
+                return self.env['ir.attachment'].create(attachment_data)
