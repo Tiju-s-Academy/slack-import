@@ -13,10 +13,10 @@
                         <!-- <field name="channels_to_import" widget="many2many_checkboxes"/> -->
                     </group>
                 </sheet>
-                <!-- <footer>
-                    <button name="action_deliver_products" string="Deliver" type="object" class="btn-primary" data-hotkey="q"/>
+                <footer>
+                    <button name="action_import_data" string="Import Data" type="object" class="btn-primary"/>
                     <button string="Cancel" class="btn-secondary" special="cancel" data-hotkey="z"/>
-                </footer> -->
+                </footer>
             </form>
         </field>
     </record>

@@ -21,13 +21,23 @@ def replace_user_mention_with_user_name(text):
     text = re.sub(pattern, get_user_name_from_match, text)
     return text
 
-def get_anchor_tag_from_match(match):
+def get_pipe_anchor_tag_from_match(match):
     url = match.group(1)
     description = match.group(2)
-    return f"<a href='{url}'>{description}</a>"
-def replace_link_with_anchor_tag(text):
-    pattern = r'<(https?://[^\|>]+)\|([^>]+)>'
-    text = re.sub(pattern, get_anchor_tag_from_match, text)
+    return f"<a target='_blank' rel='noreferrer noopener' href='{url}'>{description}</a>"
+
+#  url|description
+def replace_pipe_link_with_anchor_tag(text):
+    pattern = r'<(https?://[^\s|>]+)\|([^>]+)>'   
+    text = re.sub(pattern, get_pipe_anchor_tag_from_match, text)
+    return text
+
+def get_url_anchor_tag_from_match(match):
+    url = match.group(1)
+    return f"<a target='_blank' rel='noreferrer noopener' href='{url}'>{url}</a>"
+def replace_url_with_anchor_tag(text):
+    pattern = r'(https?://[^\s]+)'
+    text = re.sub(pattern, get_url_anchor_tag_from_match, text)
     return text
 
 def get_tel_anchor_tag_from_match(match):
@@ -43,7 +53,6 @@ def replace_tel_link_with_anchor_tag(text):
 
 def replace_line_break_with_br(text):
     return text.replace('\n', '<br>')
-
 
 # Function to replace matched emoji text with its Unicode character
 def get_unicode_from_emoji(match):

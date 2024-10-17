@@ -9,6 +9,7 @@ import os
 import json
 from . import helpers
 import traceback
+from markupsafe import Markup
 
 emoji_unicode_data = {}
 _logger = logging.getLogger("Slack Import Debug")
@@ -25,8 +26,8 @@ class SlackImportWizard(models.TransientModel):
 
     channels_to_import = fields.Many2many('slack.channel.name')
 
-    @api.onchange('slack_workspace_file')
-    def _onchange_slack_workspace_file(self):
+
+    def action_import_data(self):
         """
         Writes the uploaded binary file to a temporary file.
         """
@@ -98,10 +99,11 @@ class SlackImportWizard(models.TransientModel):
 
                             if message.get('files'):
                                 text += helpers.get_files(message)
+
+                            # Process the text to include tags, convert to unicode etc.. 
                             text = self.process_text(text)
 
                             print(text)
-                            # print(f"{users[message['user']]['name']}: {message['text']}")
                         except:
                             exc = traceback.format_exc()
                             errored_messages.append((message, exc))
@@ -120,7 +122,8 @@ class SlackImportWizard(models.TransientModel):
                                 if reply_message.get('files'):
                                     reply_text += f"\t {helpers.get_files(reply_message)}"
 
-                                reply_text = self.process_text(text)
+                                # Process the text to include tags, convert to unicode etc.. 
+                                reply_text = self.process_text(reply_text)
 
                                 try:
                                     print(reply_text)
@@ -142,11 +145,14 @@ class SlackImportWizard(models.TransientModel):
             _logger.info(f"Temporary file created at: {temp_file_path}")
 
             # Perform any additional logic here with the temp file
-            
+
     def process_text(self, text):
         text = helpers.replace_user_mention_with_user_name(text)
-        text = helpers.replace_link_with_anchor_tag(text)
+        text = helpers.replace_pipe_link_with_anchor_tag(text)
+        text = helpers.replace_url_with_anchor_tag(text)
         text = helpers.replace_tel_link_with_anchor_tag(text)
         text = helpers.replace_line_break_with_br(text)
         text = helpers.replace_emoji_with_unicode(text, emoji_unicode_data)
+
+        text = f"<p>{text}</p>"
         return text
