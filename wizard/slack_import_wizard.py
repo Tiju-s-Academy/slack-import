@@ -103,6 +103,8 @@ class SlackImportWizard(models.TransientModel):
                         if message.get('attachments') and not message.get('text'):
                             text += self.process_text(helpers.get_attachments(message))
                             # print(message,'\n')
+                        if message.get('files'):
+                            text += self.process_text(helpers.get_files(message))
 
                         message_attachments = []
                         attachments_insert_list = []
@@ -110,9 +112,9 @@ class SlackImportWizard(models.TransientModel):
                         if message.get('files'):
                             for file_data in message['files']:
                                 attachment = self.create_attachment_from_file_data(file_data, extract_path)
-                                message_attachments.append(attachment)
-                                attachments_insert_list.append((4, attachment.id))
-                            # text += self.process_text(helpers.get_files(message))
+                                if attachment:
+                                    message_attachments.append(attachment)
+                                    attachments_insert_list.append((4, attachment.id))
 
                         # Process the text to include tags, convert to unicode etc.. 
                         # text = self.process_text(text)
@@ -122,7 +124,7 @@ class SlackImportWizard(models.TransientModel):
                         for attachment in message_attachments:
                             attachment.write({'res_id': new_message_record.id})
                         new_message_record.write({'attachment_ids': attachments_insert_list})
-                        print(text)
+                        # print(text)
 
                             
                         # Replies to message
@@ -137,8 +139,9 @@ class SlackImportWizard(models.TransientModel):
                                 if reply_message.get('files'):
                                     for file_data in reply_message['files']:
                                         attachment = self.create_attachment_from_file_data(file_data, extract_path)
-                                        message_attachments.append(attachment)
-                                        attachments_insert_list.append((4, attachment.id))
+                                        if attachment:
+                                            message_attachments.append(attachment)
+                                            attachments_insert_list.append((4, attachment.id))
 
 
                                 reply_text = f"<p>"
@@ -159,13 +162,13 @@ class SlackImportWizard(models.TransientModel):
                                 new_reply_message_record.write({'attachment_ids': attachments_insert_list})
                                 
                                 try:
-                                    print(reply_text)
+                                    # print(reply_text)
                                     pass
                                     # print(f"\t {users[reply['user']]['name']}: {messages_dict[reply['ts']]['text']}")
                                 except:
                                     exc = traceback.format_exc()
                                     errored_messages.append((messages_dict[reply['ts']], exc))
-                        print('\n')
+                        # print('\n')
 
                     print('errored_messages', len(errored_messages))
                     for message, exc in errored_messages:
@@ -182,8 +185,8 @@ class SlackImportWizard(models.TransientModel):
         print("TEXTBEFORE: ", text)
         text = helpers.replace_user_mention_with_user_name(text)
         text = helpers.replace_pipe_link_with_anchor_tag(text)
-        text = helpers.replace_url_with_anchor_tag(text)  # Then handle plain URLs
         text = helpers.replace_tel_link_with_anchor_tag(text)
+        text = helpers.replace_url_with_anchor_tag(text)
         text = helpers.replace_line_break_with_br(text)
         text = helpers.replace_short_name_with_emoji(text)
 
@@ -223,8 +226,10 @@ class SlackImportWizard(models.TransientModel):
         return values
     
     def create_attachment_from_file_data(self, file_data, extract_path):
-        file_path = f"{extract_path}/__uploads/{file_data['id']}/{file_data['name']}"
-        if Path(file_path).exists:
+        file_dir = f"{extract_path}/__uploads/{file_data['id']}"
+        file_path = f"{file_dir}/{file_data['name']}"
+
+        if Path(file_dir).is_dir() and Path(file_path).exists():
             with open(file_path, 'rb') as file:
                 data = file.read()
                 attachment_data = {
@@ -235,3 +240,4 @@ class SlackImportWizard(models.TransientModel):
                 }
 
                 return self.env['ir.attachment'].create(attachment_data)
+        return False
