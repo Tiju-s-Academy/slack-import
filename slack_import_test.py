@@ -77,6 +77,9 @@ def replace_tel_link_with_anchor_tag(text):
     text = re.sub(pattern, get_tel_anchor_tag_from_match, text)
     return text
 
+def replace_line_break_with_br(text):
+    return text.replace('\n', '<br>')
+
 errored_messages = []
 for message in messages:
     try:
@@ -92,6 +95,7 @@ for message in messages:
         text = replace_user_mention_with_user_name(text)
         text = replace_link_with_anchor_tag(text)
         text = replace_tel_link_with_anchor_tag(text)
+        text = replace_line_break_with_br(text)
 
         print(text)
         # print(f"{users[message['user']]['name']}: {message['text']}")
@@ -115,6 +119,7 @@ for message in messages:
             reply_text = replace_user_mention_with_user_name(reply_text)
             reply_text = replace_link_with_anchor_tag(reply_text)
             reply_text = replace_tel_link_with_anchor_tag(reply_text)
+            reply_text = replace_line_break_with_br(reply_text)
             try:
                 print(reply_text)
                 pass

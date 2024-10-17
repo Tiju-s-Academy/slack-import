@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="slack_import_wizard_form" model="ir.ui.view">
+        <field name="name">slack.import.wizard.form</field>
+        <field name="model">slack.import.wizard</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="slack_workspace_file" filename="slack_filename"/>
+                        <field name="slack_filename" invisible="1"/>
+                        <!-- <field name="channels_to_import" widget="many2many_checkboxes"/> -->
+                    </group>
+                </sheet>
+                <!-- <footer>
+                    <button name="action_deliver_products" string="Deliver" type="object" class="btn-primary" data-hotkey="q"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel" data-hotkey="z"/>
+                </footer> -->
+            </form>
+        </field>
+    </record>
+</odoo>
