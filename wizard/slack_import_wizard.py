@@ -10,6 +10,7 @@ import json
 from . import helpers
 import traceback
 
+emoji_unicode_data = {}
 _logger = logging.getLogger("Slack Import Debug")
 
 class SlackChannelNames(models.Model):
@@ -31,7 +32,6 @@ class SlackImportWizard(models.TransientModel):
         """
         if self.slack_workspace_file:
 
-
             zip_file_path =  '/tmp/odoo_slack_data_temp.zip'
             extract_path = '/tmp/odoo_slack_data_temp'
             if Path(extract_path).is_dir():
@@ -48,18 +48,19 @@ class SlackImportWizard(models.TransientModel):
                 zip_ref.extractall(extract_path)
 
             # _logger.error(os.listdir('/tmp/odoo_slack_data_temp'))
+            global emoji_unicode_data
+            emoji_unicode_data = helpers.get_emoji_data()
 
             users_file_path = f'{extract_path}/users.json'
-
             users = {}
             if Path(users_file_path).exists():
-                users = self.get_all_users(users_file_path)
+                users = helpers.get_all_users(users_file_path)
                 # Set value for users dict in helpers module too
                 helpers.users = users
 
             channels_file_path = f'{extract_path}/channels.json'
             if Path(channels_file_path).exists():
-                channels = self.get_all_channels(channels_file_path)
+                channels = helpers.get_all_channels(channels_file_path)
                 messages_dict = {}
                 for channel_name, channel_data in channels.items():
                     _logger.error(channel_name)
@@ -97,10 +98,7 @@ class SlackImportWizard(models.TransientModel):
 
                             if message.get('files'):
                                 text += helpers.get_files(message)
-                            text = helpers.replace_user_mention_with_user_name(text)
-                            text = helpers.replace_link_with_anchor_tag(text)
-                            text = helpers.replace_tel_link_with_anchor_tag(text)
-                            text = helpers.replace_line_break_with_br(text)
+                            text = self.process_text(text)
 
                             print(text)
                             # print(f"{users[message['user']]['name']}: {message['text']}")
@@ -121,10 +119,9 @@ class SlackImportWizard(models.TransientModel):
                                     reply_text += f"\t {helpers.get_attachments(reply_message)}"
                                 if reply_message.get('files'):
                                     reply_text += f"\t {helpers.get_files(reply_message)}"
-                                reply_text = helpers.replace_user_mention_with_user_name(reply_text)
-                                reply_text = helpers.replace_link_with_anchor_tag(reply_text)
-                                reply_text = helpers.replace_tel_link_with_anchor_tag(reply_text)
-                                reply_text = helpers.replace_line_break_with_br(reply_text)
+
+                                reply_text = self.process_text(text)
+
                                 try:
                                     print(reply_text)
                                     pass
@@ -146,18 +143,10 @@ class SlackImportWizard(models.TransientModel):
 
             # Perform any additional logic here with the temp file
             
-    def get_all_channels(self, filename):
-        channels = {}
-        with open(filename) as file:
-            channels_list = json.load(file)
-            for channel in channels_list:
-                channels[channel['name_normalized']] = channel
-        return channels
-    
-    def get_all_users(self, filename):
-        users = {}
-        with open(filename) as file:
-            users_list = json.load(file)
-            for user in users_list:
-                users[user['id']] = user
-        return users
+    def process_text(self, text):
+        text = helpers.replace_user_mention_with_user_name(text)
+        text = helpers.replace_link_with_anchor_tag(text)
+        text = helpers.replace_tel_link_with_anchor_tag(text)
+        text = helpers.replace_line_break_with_br(text)
+        text = helpers.replace_emoji_with_unicode(text, emoji_unicode_data)
+        return text
