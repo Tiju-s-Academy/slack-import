@@ -4,10 +4,6 @@ class MailMessage(models.Model):
     _inherit = "mail.message"
 
     is_slack_message = fields.Boolean()
-
-    def create(self, vals):
-        print('Create vals: ', vals)
-        return super().create(vals)
     
 class DiscussChannel(models.Model):
     _inherit = "discuss.channel"

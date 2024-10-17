@@ -2,6 +2,7 @@
 import re
 import json
 import requests
+import emoji
 
 users = {}
 
@@ -54,22 +55,14 @@ def replace_tel_link_with_anchor_tag(text):
 def replace_line_break_with_br(text):
     return text.replace('\n', '<br>')
 
-# Function to replace matched emoji text with its Unicode character
-def get_unicode_from_emoji(match):
-    # Extract the matched emoji name (without the colons)
-    emoji_name = match.group(1)
-    # Return the corresponding Unicode character, or leave it as is if not found
-    unicode = emoji_unicode_data.get(emoji_name)
-    if unicode:
-        unicode = f'&#{unicode};'
-        return unicode
-    return match.group(0)
 
-def replace_emoji_with_unicode(text, emoji_data):
-    global emoji_unicode_data
-    emoji_unicode_data = emoji_data
+def get_emoji_from_short_code(match):
+    emoji_name = match.group(0)
+    return emoji.emojize(emoji_name)
+
+def replace_short_name_with_emoji(text):
     pattern = r':([a-zA-Z0-9_]+):'
-    text = re.sub(pattern, get_unicode_from_emoji, text)
+    text = re.sub(pattern, get_emoji_from_short_code, text)
     return text
 
 def get_all_channels(filename):
@@ -87,12 +80,3 @@ def get_all_users(filename):
         for user in users_list:
             users[user['id']] = user
     return users
-
-def get_emoji_data():
-    emoji_data_url = 'https://raw.githubusercontent.com/iamcal/emoji-data/master/emoji.json'
-    res = requests.get(emoji_data_url)
-    emoji_data = json.loads(res.content)
-    emoji_unicode_data = {}
-    for emoji in emoji_data:
-        emoji_unicode_data[emoji['short_name']] = emoji['unified']
-    return emoji_unicode_data

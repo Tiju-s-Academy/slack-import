@@ -1,6 +1,7 @@
 # Normal Message
 [
-    {'email_add_signature': True, 
+    {
+     'email_add_signature': True, 
      'record_name': 'general', 
      'author_id': 3, 'author_guest_id': False, 
      'email_from': '"Mitchell Admin" <admin@yourcompany.example.com>', 
