@@ -1,4 +1,5 @@
 from odoo import models,fields,api
+from odoo.exceptions import ValidationError
 import base64
 import tempfile
 import logging
@@ -34,7 +35,7 @@ class SlackImportWizard(models.TransientModel):
         """
         if self.slack_workspace_file:
 
-            self.clear_all_slack_data_from_db() #For debug and test only
+            # self.clear_all_slack_data_from_db() #For debug and test only
 
             zip_file_path =  '/tmp/odoo_slack_data_temp.zip'
             extract_path = '/tmp/odoo_slack_data_temp'
@@ -59,12 +60,16 @@ class SlackImportWizard(models.TransientModel):
                 helpers.users = users
                 # Create users
                 for user_slack_id, user_data in users.items():
-                    user_data['odoo_user'] = self.env['res.users'].create({
-                        'name': user_data['name'],
-                        'login': user_data['profile'].get('email') or user_data['name'],
-                        'slack_user_id': user_slack_id,
-                        'is_slack_user': True,
-                    })
+                    # user_data['odoo_user'] = self.env['res.users'].create({
+                    #     'name': user_data['name'],
+                    #     'login': user_data['profile'].get('email') or user_data['name'],
+                    #     'slack_user_id': user_slack_id,
+                    #     'is_slack_user': True,
+                    # })
+                    try:
+                        user_data['odoo_user'] = self.env['res.users'].sudo().search([('slack_user_id','=', user_slack_id)])[0]
+                    except:
+                        raise ValidationError(f'Cannot find a User with Slack User ID: {user_slack_id}')
 
             channels_file_path = f'{extract_path}/channels.json'
             if Path(channels_file_path).exists():
