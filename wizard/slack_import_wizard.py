@@ -35,7 +35,7 @@ class SlackImportWizard(models.TransientModel):
         """
         if self.slack_workspace_file:
 
-            # self.clear_all_slack_data_from_db() #For debug and test only
+            self.clear_all_slack_data_from_db() #For debug and test only
 
             zip_file_path =  '/tmp/odoo_slack_data_temp.zip'
             extract_path = '/tmp/odoo_slack_data_temp'
@@ -200,7 +200,7 @@ class SlackImportWizard(models.TransientModel):
     
     # For debug purpose only
     def clear_all_slack_data_from_db(self):
-        self.env['res.users'].sudo().search([('is_slack_user','=',True)]).unlink()
+        # self.env['res.users'].sudo().search([('is_slack_user','=',True)]).unlink()
         self.env['mail.message'].sudo().search([('is_slack_message','=',True)]).unlink()
         self.env['discuss.channel'].sudo().search([('is_slack_channel','=',True)]).unlink()
 
