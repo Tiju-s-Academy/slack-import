@@ -134,7 +134,10 @@ class SlackImportWizard(models.TransientModel):
                         # Process the text to include tags, convert to unicode etc.. 
                         # text = self.process_text(text)
                         text = text+ '</p>'
-                        create_vals = self.get_values_for_record_creation(message_data=text, channel_name=channel_name, send_user=users[message['user']]['odoo_user'], timestamp = message['ts'])
+
+                        send_user = users.get(message['user']) or FALLBACK_USER
+                        send_user = send_user['odoo_user']
+                        create_vals = self.get_values_for_record_creation(message_data=text, channel_name=channel_name, send_user=send_user, timestamp = message['ts'])
                         new_message_record = self.env['mail.message'].create(create_vals)
                         for attachment in message_attachments:
                             attachment.write({'res_id': new_message_record.id})
