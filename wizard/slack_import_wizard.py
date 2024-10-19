@@ -13,6 +13,7 @@ import traceback
 from markupsafe import Markup
 from datetime import datetime
 import mimetypes
+import tqdm
 
 _logger = logging.getLogger("Slack Import Debug")
 
@@ -80,7 +81,7 @@ class SlackImportWizard(models.TransientModel):
                 channels = helpers.get_all_channels(channels_file_path)
                 messages_dict = {}
                 for channel_name, channel_data in channels.items():
-                    _logger.error(channel_name)
+                    _logger.info(f'Importing Channel: {channel_name}')
                     messages = []
                     # Store all messages in current channel
                     for filename in os.listdir(f'{extract_path}/{channel_name}'):
@@ -91,7 +92,7 @@ class SlackImportWizard(models.TransientModel):
                     for message in messages:
                         messages_dict[message['ts']] = message.copy()
 
-                    # Remove all messages which are inside a thread, as those will be retrieved from the message dict later
+                    # Remove all messages which are inside a reply thread, as those will be retrieved from the message dict later
                     for i in range(len(messages)-1, -1, -1):
                         thread_ts = messages[i].get('thread_ts', False)
                         if thread_ts:
@@ -99,12 +100,12 @@ class SlackImportWizard(models.TransientModel):
                                 messages.pop(i)
 
                     # Sort the messages dict by the timestamp it is send 
-                    def msg_send_time(msg):
-                        return msg['ts']
-                    messages = sorted(messages, key=msg_send_time)
+                    # def msg_send_time(msg):
+                    #     return msg['ts']
+                    # messages = sorted(messages, key=msg_send_time)
 
                     errored_messages = []
-                    for message in messages:
+                    for message in tqdm.tqdm(messages, desc=f"Importing Messages from Channel: {channel_name}"):
                         text = f"<p>"
                         if message.get('text'):
                             text += self.process_text(message['text'])
@@ -179,7 +180,7 @@ class SlackImportWizard(models.TransientModel):
                                     errored_messages.append((messages_dict[reply['ts']], exc))
                         # print('\n')
 
-                    print('errored_messages', len(errored_messages))
+                    print('\nerrored_messages', len(errored_messages))
                     for message, exc in errored_messages:
                         print(message, exc)
 
@@ -191,7 +192,7 @@ class SlackImportWizard(models.TransientModel):
             # Perform any additional logic here with the temp file
 
     def process_text(self, text):
-        print("TEXTBEFORE: ", text)
+        # print("TEXTBEFORE: ", text)
         text = helpers.replace_user_mention_with_user_name(text)
         text = helpers.replace_pipe_link_with_anchor_tag(text)
         text = helpers.replace_tel_link_with_anchor_tag(text)
