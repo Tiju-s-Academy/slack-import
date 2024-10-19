@@ -24,7 +24,9 @@ class SlackImportWizard(models.TransientModel):
     _name = "slack.import.wizard"
 
     slack_workspace_file = fields.Binary(string="Slack Workspace File (Zip)")
-    slack_filename = fields.Char(string="Slack Filename")    
+    slack_filename = fields.Char(string="Slack Filename")   
+
+    extract_path = fields.Char(string="Zip Extracted Path") 
 
     channels_to_import = fields.Many2many('slack.channel.name')
 
@@ -33,24 +35,26 @@ class SlackImportWizard(models.TransientModel):
         """
         Writes the uploaded binary file to a temporary file.
         """
-        if self.slack_workspace_file:
-
+        # if self.slack_workspace_file:
+        if self.extract_path:
             self.clear_all_slack_data_from_db() #For debug and test only
 
-            zip_file_path =  '/tmp/odoo_slack_data_temp.zip'
-            extract_path = '/tmp/odoo_slack_data_temp'
-            if Path(extract_path).is_dir():
-                shutil.rmtree(extract_path)
+            # zip_file_path =  '/tmp/odoo_slack_data_temp.zip'
+            extract_path = self.extract_path
+            if not Path(extract_path).is_dir():
+                raise ValidationError(f'{extract_path} is not a valid Directory!') 
+            # if Path(extract_path).is_dir():
+            #     shutil.rmtree(extract_path)
             # Decode the binary data
-            file_data = base64.b64decode(self.slack_workspace_file)
+            # file_data = base64.b64decode(self.slack_workspace_file)
             
             # Create a temporary file
-            with open(zip_file_path, 'wb') as temp_file:
-                temp_file.write(file_data)
-                temp_file_path = temp_file.name
+            # with open(zip_file_path, 'wb') as temp_file:
+            #     temp_file.write(file_data)
+            #     temp_file_path = temp_file.name
 
-            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
+            # with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+            #     zip_ref.extractall(extract_path)
 
             users_file_path = f'{extract_path}/users.json'
             users = {}
@@ -182,7 +186,7 @@ class SlackImportWizard(models.TransientModel):
                     # break
 
             # You can print or log the path for debugging purposes
-            _logger.info(f"Temporary file created at: {temp_file_path}")
+            # _logger.info(f"Temporary file created at: {temp_file_path}")
 
             # Perform any additional logic here with the temp file
 
