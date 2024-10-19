@@ -121,10 +121,14 @@ class SlackImportWizard(models.TransientModel):
 
                         if message.get('files'):
                             for file_data in message['files']:
-                                attachment = self.create_attachment_from_file_data(file_data, extract_path)
-                                if attachment:
-                                    message_attachments.append(attachment)
-                                    attachments_insert_list.append((4, attachment.id))
+                                try:
+                                    attachment = self.create_attachment_from_file_data(file_data, extract_path)
+                                    if attachment:
+                                        message_attachments.append(attachment)
+                                        attachments_insert_list.append((4, attachment.id))
+                                except MemoryError:
+                                    _logger.error(f"Memory Error on Creating Attachment for {file_data['name']}")
+
 
                         # Process the text to include tags, convert to unicode etc.. 
                         # text = self.process_text(text)
@@ -136,7 +140,6 @@ class SlackImportWizard(models.TransientModel):
                         new_message_record.write({'attachment_ids': attachments_insert_list})
                         # print(text)
 
-                            
                         # Replies to message
                         if message.get('thread_ts'):
                             # print(message)
@@ -148,11 +151,13 @@ class SlackImportWizard(models.TransientModel):
 
                                 if reply_message.get('files'):
                                     for file_data in reply_message['files']:
-                                        attachment = self.create_attachment_from_file_data(file_data, extract_path)
-                                        if attachment:
-                                            message_attachments.append(attachment)
-                                            attachments_insert_list.append((4, attachment.id))
-
+                                        try:
+                                            attachment = self.create_attachment_from_file_data(file_data, extract_path)
+                                            if attachment:
+                                                message_attachments.append(attachment)
+                                                attachments_insert_list.append((4, attachment.id))
+                                        except MemoryError:
+                                            _logger.error(f"Memory Error on Creating Attachment for {file_data['name']}")
 
                                 reply_text = f"<p>"
 
