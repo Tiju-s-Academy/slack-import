@@ -182,6 +182,7 @@ class SlackImportWizard(models.TransientModel):
                                     send_user = users.get(reply_message['user']) or FALLBACK_USER
                                 else:
                                     send_user = FALLBACK_USER
+                                send_user = send_user['odoo_user']
                                 create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= send_user, parent_msg_id=new_message_record.id, timestamp=reply_message['ts'] )
                                 new_reply_message_record = self.env['mail.message'].create(create_vals)
                                 for attachment in message_attachments:
