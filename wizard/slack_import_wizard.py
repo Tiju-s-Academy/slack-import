@@ -101,9 +101,9 @@ class SlackImportWizard(models.TransientModel):
                                 messages.pop(i)
 
                     # Sort the messages dict by the timestamp it is send 
-                    # def msg_send_time(msg):
-                    #     return msg['ts']
-                    # messages = sorted(messages, key=msg_send_time)
+                    def msg_send_time(msg):
+                        return msg['ts']
+                    messages = sorted(messages, key=msg_send_time)
 
                     errored_messages = []
                     for message in tqdm.tqdm(messages, desc=f"Importing Messages from Channel: {channel_name}"):
