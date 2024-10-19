@@ -75,7 +75,8 @@ class SlackImportWizard(models.TransientModel):
                         user_data['odoo_user'] = self.env['res.users'].sudo().search([('slack_user_id','=', user_slack_id)])[0]
                     except:
                         raise ValidationError(f'Cannot find a User with Slack User ID: {user_slack_id}')
-
+            FALLBACK_USER = {'name': 'Deleted User', 'odoo_user': self.env['res.users'].sudo().search([('login','=','_deleted_')])[0] }
+            users['FALLBACK_USER'] = FALLBACK_USER
             channels_file_path = f'{extract_path}/channels.json'
             if Path(channels_file_path).exists():
                 channels = helpers.get_all_channels(channels_file_path)
@@ -170,7 +171,10 @@ class SlackImportWizard(models.TransientModel):
 
                                 # Process the text to include tags, convert to unicode etc.. 
                                 reply_text = reply_text+'</p>'
-                                create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= users[reply_message['user']]['odoo_user'], parent_msg_id=new_message_record.id, timestamp=reply_message['ts'] )
+
+                                send_user = users.get(reply_message['user']) or FALLBACK_USER
+                                send_user = send_user['odoo_user']
+                                create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= send_user, parent_msg_id=new_message_record.id, timestamp=reply_message['ts'] )
                                 new_reply_message_record = self.env['mail.message'].create(create_vals)
                                 for attachment in message_attachments:
                                     attachment.write({'res_id': new_reply_message_record.id})

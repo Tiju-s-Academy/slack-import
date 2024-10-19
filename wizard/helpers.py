@@ -16,7 +16,8 @@ def get_files(message):
 def get_user_name_from_match(match):
     user_id = match.group(0)
     user_id = user_id[2:len(user_id)-1]
-    return '@'+users[user_id]['name']
+    user = users.get(user_id) or users['FALLBACK_USER']
+    return '@'+user['name']
 def replace_user_mention_with_user_name(text):
     pattern = r'<@U[^>]+>'
     text = re.sub(pattern, get_user_name_from_match, text)
