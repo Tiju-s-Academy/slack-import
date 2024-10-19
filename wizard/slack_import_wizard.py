@@ -135,7 +135,10 @@ class SlackImportWizard(models.TransientModel):
                         # text = self.process_text(text)
                         text = text+ '</p>'
 
-                        send_user = users.get(message['user']) or FALLBACK_USER
+                        if message.get('user'):
+                            send_user = users.get(message['user']) or FALLBACK_USER
+                        else:
+                            send_user = FALLBACK_USER
                         send_user = send_user['odoo_user']
                         create_vals = self.get_values_for_record_creation(message_data=text, channel_name=channel_name, send_user=send_user, timestamp = message['ts'])
                         new_message_record = self.env['mail.message'].create(create_vals)
@@ -175,8 +178,10 @@ class SlackImportWizard(models.TransientModel):
                                 # Process the text to include tags, convert to unicode etc.. 
                                 reply_text = reply_text+'</p>'
 
-                                send_user = users.get(reply_message['user']) or FALLBACK_USER
-                                send_user = send_user['odoo_user']
+                                if reply_message.get('user'):
+                                    send_user = users.get(reply_message['user']) or FALLBACK_USER
+                                else:
+                                    send_user = FALLBACK_USER
                                 create_vals = self.get_values_for_record_creation(message_data=reply_text, channel_name=channel_name, send_user= send_user, parent_msg_id=new_message_record.id, timestamp=reply_message['ts'] )
                                 new_reply_message_record = self.env['mail.message'].create(create_vals)
                                 for attachment in message_attachments:
